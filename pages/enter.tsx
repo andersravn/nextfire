@@ -9,6 +9,7 @@ import {
 } from "react";
 import { UserContext } from "../lib/context";
 import debounce from "lodash.debounce";
+import Image from "next/image";
 
 export default function EnterPage() {
   const { user, username } = useContext(UserContext);
@@ -35,7 +36,7 @@ function SignInButton() {
 
   return (
     <button className="btn-google" onClick={signInWithGoogle}>
-      <img src={"/google.png"} /> Sign in with Google
+      <Image src={"/google.png"} alt="Google Sign In" /> Sign in with Google
     </button>
   );
 }
@@ -50,9 +51,22 @@ function UsernameForm() {
   const [loading, setLoading] = useState(false);
   const { user, username } = useContext(UserContext);
 
+  const checkUsername = useCallback(
+    (username: string) =>
+      debounce(async (username: string) => {
+        if (username.length >= 3) {
+          const ref = firestore.doc(`usernames/${username}`);
+          const { exists } = await ref.get();
+          setIsValid(!exists);
+          setLoading(false);
+        }
+      }, 500),
+    []
+  );
+
   useEffect(() => {
     checkUsername(formValue);
-  }, [formValue]);
+  }, [formValue, checkUsername]);
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.toLowerCase();
@@ -71,18 +85,6 @@ function UsernameForm() {
       setIsValid(false);
     }
   };
-
-  const checkUsername = useCallback(
-    debounce(async (username: string) => {
-      if (username.length >= 3) {
-        const ref = firestore.doc(`usernames/${username}`);
-        const { exists } = await ref.get();
-        setIsValid(!exists);
-        setLoading(false);
-      }
-    }, 500),
-    []
-  );
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
